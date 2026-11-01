@@ -38,7 +38,7 @@ data "aws_iam_policy_document" "db_connect" {
     sid       = "AllowAuroraDatabaseConnect"
     effect    = "Allow"
     actions   = ["rds-db:connect"]
-    resources = ["arn:aws:rds-db:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:db-user:${var.db_cluster_resource_id}/${var.db_user}"]
+    resources = ["arn:aws:rds-db:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:db-user:${var.db_cluster_resource_id}/${var.db_user}"]
   }
 }
 
@@ -61,42 +61,44 @@ resource "aws_iam_instance_profile" "app" {
 resource "aws_security_group" "alb" {
   name   = "${local.name_prefix}-alb-sg"
   vpc_id = var.vpc_id
+}
 
-  ingress = [
-    {
-      cidr_blocks = ["0.0.0.0/0"]
-      protocol    = "tcp"
-      from_port   = 80
-      to_port     = 80
-    }
-  ]
+resource "aws_vpc_security_group_ingress_rule" "alb" {
+  security_group_id = aws_security_group.alb.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "tcp"
+  from_port         = 80
+  to_port           = 80
+}
 
-  egress = [
-    {
-      security_groups = [aws_security_group.app.id]
-      protocol        = "tcp"
-      from_port       = 80
-      to_port         = 80
-    }
-  ]
+resource "aws_vpc_security_group_egress_rule" "alb" {
+  security_group_id            = aws_security_group.alb.id
+  referenced_security_group_id = aws_security_group.app.id
+  ip_protocol                  = "tcp"
+  from_port                    = 80
+  to_port                      = 80
 }
 
 resource "aws_security_group" "app" {
-  name   = "${local.name_prefix}-app-sg"
-  vpc_id = var.vpc_id
+  name        = "${local.name_prefix}-app-sg"
+  description = "App tier instances: accept traffic from the ALB only"
+  vpc_id      = var.vpc_id
+}
 
-  ingress = [{
-    security_groups = [aws_security_group.alb.id]
-    from_port       = 80
-    to_port         = 80
-  }]
+resource "aws_vpc_security_group_ingress_rule" "app" {
+  security_group_id            = aws_security_group.app.id
+  referenced_security_group_id = aws_security_group.alb.id
+  description                  = "HTTP from the ALB"
+  ip_protocol                  = "tcp"
+  from_port                    = 80
+  to_port                      = 80
+}
 
-  egress = [{
-    cidr_blocks = ["0.0.0.0/0"]
-    protocol    = "-1"
-    from_port   = 0
-    to_port     = 0
-  }]
+resource "aws_vpc_security_group_egress_rule" "app" {
+  security_group_id = aws_security_group.app.id
+  description       = "Allow all outbound traffic"
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
 }
 
 resource "aws_launch_template" "app" {
@@ -168,7 +170,7 @@ resource "aws_lb_listener" "http" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_alb_target_group.app.arn
+    target_group_arn = aws_lb_target_group.app.arn
   }
 }
 
@@ -186,7 +188,7 @@ resource "aws_autoscaling_group" "app" {
     capacity_distribution_strategy = "balanced-best-effort"
   }
 
-  target_group_arns         = [aws_alb_target_group.app.arn]
+  target_group_arns         = [aws_lb_target_group.app.arn]
   health_check_type         = "ELB"
   health_check_grace_period = 300
 
