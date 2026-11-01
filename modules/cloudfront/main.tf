@@ -31,13 +31,13 @@ resource "aws_cloudfront_distribution" "main" {
   origin {
     domain_name              = var.frontend_bucket_regional_domain_name
     origin_id                = "frontend"
-    origin_access_control_id = aws_cloudfront_origin_access_control.s3_oac.id
+    origin_access_control_id = aws_cloudfront_origin_access_control.s3.id
   }
 
   origin {
     domain_name              = var.storage_bucket_regional_domain_name
     origin_id                = "storage"
-    origin_access_control_id = aws_cloudfront_origin_access_control.s3_oac.id
+    origin_access_control_id = aws_cloudfront_origin_access_control.s3.id
   }
 
   origin {
@@ -56,7 +56,7 @@ resource "aws_cloudfront_distribution" "main" {
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
     cached_methods         = ["GET", "HEAD"]
-    cache_policy_id        = data.aws_cloudfront_cache_policy.optimized
+    cache_policy_id        = data.aws_cloudfront_cache_policy.optimized.id
   }
 
   ordered_cache_behavior {
@@ -65,7 +65,7 @@ resource "aws_cloudfront_distribution" "main" {
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
     cached_methods         = ["GET", "HEAD"]
-    cache_policy_id        = data.aws_cloudfront_cache_policy.optimized
+    cache_policy_id        = data.aws_cloudfront_cache_policy.optimized.id
   }
 
   ordered_cache_behavior {
@@ -74,8 +74,8 @@ resource "aws_cloudfront_distribution" "main" {
     viewer_protocol_policy   = "redirect-to-https"
     allowed_methods          = ["GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"]
     cached_methods           = ["GET", "HEAD"]
-    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled
-    origin_request_policy_id = data.aws_cloudfront_cache_policy.allviewer
+    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
+    origin_request_policy_id = data.aws_cloudfront_cache_policy.allviewer.id
   }
 
   custom_error_response {
