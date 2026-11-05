@@ -1,3 +1,3 @@
-project_name = "anwar-shah-and-sons"
+project_name = "asns"
 environment  = "dev"
 region       = "ap-south-1"
