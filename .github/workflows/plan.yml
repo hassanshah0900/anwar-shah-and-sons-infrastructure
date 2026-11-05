@@ -1,15 +1,17 @@
 name: Terraform Plan
-on: 
+on:
   pull_request:
     paths:
       - "environments/**"
       - "modules/**"
+      - ".github/workflows/plan.yml"
     branches:
       - main
 
-permissions: 
+permissions:
   id-token: write
   contents: read
+  pull-requests: write
 
 jobs:
   plan:
@@ -27,22 +29,110 @@ jobs:
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
-        with: 
+        with:
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION}}
-        
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
       - name: Check Terraform Format
+        id: fmt
         run: terraform fmt -check -recursive
         working-directory: .
+        continue-on-error: true
 
       - name: Initialize Terraform Repository
-        run: terraform init 
-      
+        id: init
+        run: terraform init -input=false
+
       - name: Validate Terraform Code
-        run: terraform validate
-      
+        id: validate
+        run: terraform validate -no-color
+
       - name: Generate Terraform Plan
-        run: terraform plan
+        id: plan
+        run: terraform plan -no-color -input=false
+        continue-on-error: true
+
+      - name: Comment Plan on Pull Request
+        if: ${{ !cancelled() }}
+        uses: actions/github-script@v9
+        env:
+          ENVIRONMENT: ${{ matrix.environment }}
+          FMT_OUTCOME: ${{ steps.fmt.outcome }}
+          INIT_OUTCOME: ${{ steps.init.outcome }}
+          VALIDATE_OUTCOME: ${{ steps.validate.outcome }}
+          PLAN_OUTCOME: ${{ steps.plan.outcome }}
+          PLAN_STDOUT: ${{ steps.plan.outputs.stdout }}
+          PLAN_STDERR: ${{ steps.plan.outputs.stderr }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { ENVIRONMENT, FMT_OUTCOME, INIT_OUTCOME, VALIDATE_OUTCOME, PLAN_OUTCOME, PLAN_STDOUT, PLAN_STDERR } = process.env;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Identifies this environment's comment so later runs update it.
+            const marker = `<!-- terraform-plan:${ENVIRONMENT} -->`;
+
+            // GitHub rejects comments over 65,535 characters, so long plans are cut.
+            const maxPlanLength = 60000;
+            const fullPlan = `${PLAN_STDOUT}\n${PLAN_STDERR}`.trim();
+            const plan = fullPlan.length > maxPlanLength
+              ? `${fullPlan.slice(0, maxPlanLength)}\n\n... plan truncated, see the workflow run for the full output ...`
+              : fullPlan;
+
+            // The summary is the last line of a plan, so show it above the details.
+            const summary = fullPlan.match(/^(Plan: .*|No changes\..*)$/m)?.[0] ?? 'No plan summary available';
+
+            const body = [
+              marker,
+              `### Terraform Plan: \`${ENVIRONMENT}\``,
+              '',
+              '| Step | Result |',
+              '| --- | --- |',
+              `| Format | \`${FMT_OUTCOME}\` |`,
+              `| Init | \`${INIT_OUTCOME}\` |`,
+              `| Validate | \`${VALIDATE_OUTCOME}\` |`,
+              `| Plan | \`${PLAN_OUTCOME}\` |`,
+              '',
+              `**${summary}**`,
+              '',
+              '<details><summary>Show Plan</summary>',
+              '',
+              '```text',
+              plan,
+              '```',
+              '',
+              '</details>',
+              '',
+              `[Workflow run](${runUrl}) for commit ${context.payload.pull_request.head.sha}`,
+            ].join('\n');
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const botComment = comments.find(comment => comment.user.type === 'Bot' && comment.body.includes(marker));
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      # continue-on-error above lets the comment post, so fail the job here.
+      - name: Fail if Format or Plan Failed
+        if: ${{ steps.fmt.outcome == 'failure' || steps.plan.outcome == 'failure' }}
+        run: exit 1
