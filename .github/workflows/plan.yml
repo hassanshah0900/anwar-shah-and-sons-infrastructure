@@ -1,0 +1,48 @@
+name: Terraform Plan
+on: 
+  pull_request:
+    paths:
+      - "environments/**"
+      - "modules/**"
+    branches:
+      - main
+
+permissions: 
+  id-token: write
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [ "dev" ]
+      fail-fast: false
+    defaults:
+      run:
+        working-directory: "environments/${{ matrix.environment }}"
+    steps:
+      - name: Checkout Terraform Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with: 
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION}}
+        
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Check Terraform Format
+        run: terraform fmt -check -recursive
+        working-directory: .
+
+      - name: Initialize Terraform Repository
+        run: terraform init 
+      
+      - name: Validate Terraform Code
+        run: terraform validate
+      
+      - name: Generate Terraform Plan
+        run: terraform plan
