@@ -9,6 +9,8 @@ crash.*.log
 # Never commit AWS credentials or sensitive var files
 *.tfvars
 *.tfvars.json
+# Each environment's terraform.tfvars is committed, so it must never contain secrets
+!environments/*/terraform.tfvars
 override.tf
 override.tf.json
 *_override.tf
