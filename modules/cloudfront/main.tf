@@ -10,7 +10,7 @@ data "aws_cloudfront_cache_policy" "disabled" {
   name = "Managed-CachingDisabled"
 }
 
-data "aws_cloudfront_cache_policy" "allviewer" {
+data "aws_cloudfront_origin_request_policy" "allviewer" {
   name = "Managed-AllViewer"
 }
 
@@ -75,7 +75,7 @@ resource "aws_cloudfront_distribution" "main" {
     allowed_methods          = ["GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"]
     cached_methods           = ["GET", "HEAD"]
     cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
-    origin_request_policy_id = data.aws_cloudfront_cache_policy.allviewer.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.allviewer.id
   }
 
   custom_error_response {
