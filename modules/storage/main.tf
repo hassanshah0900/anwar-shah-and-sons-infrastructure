@@ -30,8 +30,9 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "storage" {
 
 data "aws_iam_policy_document" "storage" {
   statement {
-    effect  = "Allow"
-    actions = ["s3:GetObject"]
+    effect    = "Allow"
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.storage.arn}/*"]
 
     principals {
       type        = "Service"
