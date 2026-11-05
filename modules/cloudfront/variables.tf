@@ -19,3 +19,13 @@ variable "storage_bucket_regional_domain_name" {
 variable "backend_alb_domain_name" {
   type = string
 }
+
+variable "domain_name" {
+  type        = string
+  description = "Custom domain the distribution serves (e.g. www.example.com)."
+}
+
+variable "cloudfront_certificate_arn" {
+  type        = string
+  description = "ARN of the ACM certificate for the distribution. Must be in us-east-1 and cover domain_name."
+}

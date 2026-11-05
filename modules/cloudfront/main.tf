@@ -26,6 +26,7 @@ resource "aws_cloudfront_distribution" "main" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
+  aliases             = [var.domain_name]
 
 
   origin {
@@ -81,14 +82,14 @@ resource "aws_cloudfront_distribution" "main" {
   custom_error_response {
     error_code            = 403
     response_code         = 200
-    response_page_path    = "index.html"
+    response_page_path    = "/index.html"
     error_caching_min_ttl = 10
   }
 
   custom_error_response {
     error_code            = 404
     response_code         = 200
-    response_page_path    = "index.html"
+    response_page_path    = "/index.html"
     error_caching_min_ttl = 10
   }
 
@@ -99,6 +100,8 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    acm_certificate_arn      = var.cloudfront_certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
   }
 }
