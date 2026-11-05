@@ -10,19 +10,19 @@ resource "aws_db_subnet_group" "postgresql" {
 resource "aws_security_group" "postgresql" {
   name   = "${local.name_prefix}-postgresql-sg"
   vpc_id = var.vpc_id
-  ingress = [{
+  ingress {
     security_groups = [var.app_sg_id]
     protocol        = "tcp"
     from_port       = 5432
     to_port         = 5432
-  }]
+  }
 
-  egress = [{
+  egress {
     cidr_blocks = ["0.0.0.0/0"]
     protocol    = "-1"
     from_port   = 0
     to_port     = 0
-  }]
+  }
 }
 
 resource "aws_rds_cluster" "postgresql" {

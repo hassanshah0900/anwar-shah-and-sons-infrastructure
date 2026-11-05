@@ -5,7 +5,7 @@ output "alb_dns_name" {
 
 output "target_group_arn" {
   description = "ARN of the ALB target group linked to the ASG"
-  value       = aws_alb_target_group.app.arn
+  value       = aws_lb_target_group.app.arn
 }
 
 output "asg_name" {
