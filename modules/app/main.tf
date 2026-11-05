@@ -67,8 +67,8 @@ resource "aws_vpc_security_group_ingress_rule" "alb" {
   security_group_id = aws_security_group.alb.id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "tcp"
-  from_port         = 80
-  to_port           = 80
+  from_port         = 443
+  to_port           = 443
 }
 
 resource "aws_vpc_security_group_egress_rule" "alb" {
@@ -181,10 +181,12 @@ resource "aws_lb" "app" {
   drop_invalid_header_fields = true
 }
 
-resource "aws_lb_listener" "http" {
+resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.app.arn
-  protocol          = "HTTP"
-  port              = 80
+  protocol          = "HTTPS"
+  port              = 443
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.alb_certificate_arn
 
   default_action {
     type             = "forward"

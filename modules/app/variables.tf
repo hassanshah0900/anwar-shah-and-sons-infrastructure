@@ -37,3 +37,8 @@ variable "db_user" {
   type        = string
   description = "The PostgreSQL user the application connects as with IAM authentication. Must exist in the database and be granted the rds_iam role."
 }
+
+variable "alb_certificate_arn" {
+  type        = string
+  description = "ARN of the ACM certificate for the ALB's HTTPS listener. Must be in the same region as the ALB."
+}

@@ -20,6 +20,7 @@ module "backend" {
   app_subnet_ids         = module.network.app_subnet_ids
   public_subnet_ids      = module.network.public_subnet_ids
   db_user                = "dbadmin"
+  alb_certificate_arn    = var.alb_certificate_arn
 }
 
 module "database" {
@@ -44,6 +45,8 @@ module "cloudfront" {
   project_name                         = var.project_name
   environment                          = var.environment
   backend_alb_domain_name              = module.backend.alb_dns_name
+  domain_name                          = var.domain_name
+  cloudfront_certificate_arn           = var.cloudfront_certificate_arn
   frontend_bucket_regional_domain_name = module.frontend.s3_bucket_regional_domain_name
   storage_bucket_regional_domain_name  = module.storage.s3_bucket_regional_domain_name
 }
