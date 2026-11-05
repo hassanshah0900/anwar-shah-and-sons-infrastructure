@@ -124,10 +124,28 @@ resource "aws_launch_template" "app" {
       delete_on_termination = true
     }
   }
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = {
+      Project     = var.project_name
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+    }
+  }
+
+  tag_specifications {
+    resource_type = "volume"
+    tags = {
+      Project     = var.project_name
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+    }
+  }
 }
 
 resource "aws_lb_target_group" "app" {
-  name_prefix = "${local.name_prefix}-tg"
+  name_prefix = "app-"
   protocol    = "HTTP"
   port        = 80
   vpc_id      = var.vpc_id
